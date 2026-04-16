@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Шкала тревоги Спилбергера-Ханина (STAI)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800;900&family=Outfit:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #070b1e;
+            --bg-card: rgba(255,255,255,0.04);
+            --card-border: rgba(212,168,83,0.13);
+            --gold: #d4a853;
+            --gold-light: #f0d78c;
+            --gold-dim: #a07830;
+            --teal: #2dd4bf;
+            --coral: #f87171;
+            --amber: #fbbf24;
+            --slate: #94a3b8;
+            --lavender: #a78bfa;
+            --text: #e8ecf1;
+            --text-muted: #7b8da6;
+            --heading: 'Playfair Display', Georgia, serif;
+            --body: 'Outfit', system-ui, sans-serif;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; }
+        body { font-family: var(--body); background: var(--bg); color: var(--text); min-height: 100dvh; position: relative; margin: 0; overflow: hidden; }
+        #bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        .orb { position: fixed; border-radius: 50%; pointer-events: none; z-index: 0; filter: blur(90px); opacity: 0.26; }
+        .orb-1 { width: 320px; height: 320px; background: var(--lavender); top: -100px; left: -120px; animation: drift-a 24s ease-in-out infinite; }
+        .orb-2 { width: 270px; height: 270px; background: var(--amber); bottom: -80px; right: -100px; animation: drift-b 28s ease-in-out infinite; }
+        .orb-3 { width: 200px; height: 200px; background: var(--gold); top: 42%; right: -80px; animation: drift-c 22s ease-in-out infinite; opacity: 0.16; }
+        .orb-4 { width: 180px; height: 180px; background: var(--teal); bottom: 28%; left: -60px; animation: drift-a 30s ease-in-out infinite reverse; opacity: 0.13; }
+        @keyframes drift-a { 0%,100%{transform:translate(0,0)} 33%{transform:translate(28px,38px)} 66%{transform:translate(-18px,18px)} }
+        @keyframes drift-b { 0%,100%{transform:translate(0,0)} 33%{transform:translate(-22px,-32px)} 66%{transform:translate(18px,-14px)} }
+        @keyframes drift-c { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-28px,22px)} }
+        #app { position: relative; z-index: 1; width: 100%; height: 100dvh; }
+        .scr { position: absolute; inset: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; padding: 24px 16px; opacity: 0; pointer-events: none; transform: translateY(16px); transition: opacity 0.45s ease, transform 0.45s ease; }
+        .scr.on { opacity: 1; pointer-events: all; transform: translateY(0); }
+        .scr-inner { margin: auto; width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 20px; }
+        .scr-inner.res { max-width: 520px; margin: 0 auto; padding-top: 24px; padding-bottom: 40px; }
+        .g-card { background: var(--bg-card); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border: 1px solid var(--card-border); border-radius: 20px; padding: 28px 24px; width: 100%; }
+        h1, h2, h3, h4 { font-family: var(--heading); font-weight: 700; line-height: 1.25; color: var(--text); }
+        h1 { font-size: 2rem; } h2 { font-size: 1.4rem; } h3 { font-size: 1.1rem; }
+        .muted { color: var(--text-muted); }
+        .tabs-wrap { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 6px; display: flex; gap: 4px; flex-shrink: 0; }
+        .tab-btn { flex: 1; background: transparent; border: none; color: var(--text-muted); font-family: var(--body); font-size: 0.85rem; padding: 10px 4px; border-radius: 10px; cursor: pointer; transition: all 0.2s; text-align: center; font-weight: 500; }
+        .tab-btn.active { background: var(--gold); color: #070b1e; font-weight: 700; box-shadow: 0 4px 12px rgba(212,168,83,0.2); }
+        .swipe-container { width: 100%; overflow: hidden; position: relative; }
+        .swipe-track { display: flex; width: 300%; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); align-items: flex-start; }
+        .swipe-slide { flex: 0 0 33.3333%; width: 33.3333%; box-sizing: border-box; padding: 0 4px; display: flex; flex-direction: column; gap: 16px; }
+        .btn-g { display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--gold-dim), var(--gold), var(--gold-light), var(--gold)); background-size: 200% 200%; animation: shimmer 4s ease-in-out infinite; color: #0a0e27; font-family: var(--body); font-weight: 600; border: none; border-radius: 14px; padding: 15px 32px; font-size: 0.95rem; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 22px rgba(212,168,83,0.22); width: 100%; max-width: 300px; text-decoration: none; flex-shrink: 0;}
+        .btn-g:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(212,168,83,0.38); }
+        .btn-g:active { transform: translateY(0); }
+        @keyframes shimmer { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+        .btn-back { display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 18px; color: var(--text-muted); font-family: var(--body); font-size: 0.88rem; cursor: pointer; transition: all 0.2s; width: 100%; flex-shrink: 0; }
+        .btn-back:hover { background: rgba(255,255,255,0.07); color: var(--text); }
+        .prog-track { width: 100%; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; overflow: hidden; margin-bottom: 14px; }
+        .prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold-light)); border-radius: 2px; transition: width 0.4s ease; }
+        .b-opt { display: block; width: 100%; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 14px 16px; color: var(--text-muted); font-family: var(--body); font-size: 0.9rem; line-height: 1.45; text-align: left; cursor: pointer; transition: all 0.2s; }
+        .b-opt:hover { background: rgba(212,168,83,0.06); border-color: rgba(212,168,83,0.18); color: var(--text); }
+        .b-opt.chosen { background: rgba(212,168,83,0.18); border-color: var(--gold); color: var(--gold-light); transform: scale(0.98); }
+        #q-body-wrapper { transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease; }
+        .big-num { font-family: var(--heading); font-size: 4.2rem; font-weight: 900; line-height: 1; }
+        .bar-fill { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); }
+        .save-box { position: relative; display: inline-block; width: 100%; text-align: center; flex-shrink: 0;}
+        .save-drop { position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%) scale(0.95); background: rgba(10,14,39,0.96); backdrop-filter: blur(20px); border: 1px solid var(--card-border); border-radius: 14px; padding: 8px; min-width: 220px; opacity: 0; pointer-events: none; transition: all 0.22s; z-index: 100; }
+        .save-drop.show { opacity: 1; pointer-events: all; transform: translateX(-50%) scale(1); }
+        .save-drop button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; background: none; border: none; color: var(--text); font-family: var(--body); font-size: 0.84rem; cursor: pointer; border-radius: 10px; transition: background 0.2s; text-align: left; }
+        .save-drop button:hover { background: rgba(255,255,255,0.06); }
+        .save-drop button i { width: 18px; text-align: center; color: var(--gold); }
+        .save-drop::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 12px; height: 12px; background: rgba(10,14,39,0.96); border-right: 1px solid var(--card-border); border-bottom: 1px solid var(--card-border); }
+        .foot { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; font-size: 0.75rem; color: var(--text-muted); width: 100%; flex-shrink: 0;}
+        .foot a { color: var(--gold); text-decoration: none; display: flex; align-items: center; gap: 5px; transition: color 0.2s; }
+        .foot a:hover { color: var(--gold-light); }
+        .warn-box { background: rgba(248,113,113,0.07); border: 1px solid rgba(248,113,113,0.15); border-radius: 12px; padding: 12px 16px; text-align: left; }
+        @keyframes rise { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+        .rise { animation: rise 0.55s ease forwards; }
+        @keyframes glow-pulse { 0%,100% { filter: drop-shadow(0 0 12px rgba(167,139,250,0.3)); } 50% { filter: drop-shadow(0 0 28px rgba(167,139,250,0.55)); } }
+        .glow-icon { animation: glow-pulse 3s ease-in-out infinite; }
+        .profile-section { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .profile-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .profile-section h4 { font-family: var(--body); font-size: 0.88rem; font-weight: 600; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .profile-section h4 i { font-size: 0.8rem; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+        .profile-section p { font-size: 0.86rem; color: var(--text-muted); line-height: 1.65; font-weight: 300; }
+        .quote-marker { color: var(--gold); font-style: italic; font-weight: 400; }
+        .rec-list { list-style: none; margin-top: 8px; }
+        .rec-list li { position: relative; padding-left: 20px; margin-bottom: 8px; font-size: 0.84rem; color: var(--text-muted); line-height: 1.6; }
+        .rec-list li::before { content: '✦'; position: absolute; left: 0; color: var(--gold); font-size: 0.75rem; }
+        .scr::-webkit-scrollbar { width: 4px; }
+        .scr::-webkit-scrollbar-track { background: transparent; }
+        .scr::-webkit-scrollbar-thumb { background: rgba(212,168,83,0.18); border-radius: 2px; }
+        canvas { max-width: 100% !important; height: auto !important; }
+        @media print {
+            body { background: #fff !important; color: #111 !important; overflow: visible !important; min-height: auto !important; }
+            #app { height: auto !important; }
+            .orb, #bg-canvas, .save-box, .btn-g, .foot, .save-drop, .warn-box, .tabs-wrap, .btn-back { display: none !important; }
+            .scr { position: static !important; opacity: 1 !important; pointer-events: all !important; transform: none !important; overflow: visible !important; padding: 0 !important; }
+            .swipe-container, .swipe-track { display: block !important; overflow: visible !important; width: 100% !important; transform: none !important; height: auto !important; }
+            .swipe-slide { display: block !important; width: 100% !important; height: auto !important; page-break-inside: avoid; margin-bottom: 20px; overflow: visible !important;}
+            .g-card { background: #fff !important; border: 1px solid #ccc !important; backdrop-filter: none !important; break-inside: avoid; box-shadow: none !important; }
+            .big-num { color: #1a1a2e !important; -webkit-text-fill-color: #1a1a2e !important; }
+            .muted, .profile-section p, .rec-list li { color: #333 !important; }
+            h1, h2, h3, h4 { color: #111 !important; }
+        }
+        @media (max-width: 480px) { h1 { font-size: 1.6rem; } .g-card { padding: 22px 18px; } .big-num { font-size: 3.4rem; } .tab-btn { font-size: 0.78rem; padding: 10px 2px; } }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+    <div class="orb orb-1" aria-hidden="true"></div><div class="orb orb-2" aria-hidden="true"></div><div class="orb orb-3" aria-hidden="true"></div><div class="orb orb-4" aria-hidden="true"></div>
+
+    <div id="app">
+        <section class="scr on" id="scr-intro">
+            <div class="scr-inner">
+                <div class="g-card" style="text-align:center">
+                    <div class="glow-icon" style="font-size:52px;color:var(--lavender);margin-bottom:10px"><i class="fas fa-bolt"></i></div>
+                    <h1 style="margin-bottom:6px">Шкала тревоги Спилбергера-Ханина</h1>
+                    <p class="muted" style="font-size:0.76rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:22px">State-Trait Anxiety Inventory (STAI)</p>
+                    <div style="text-align:left;margin-bottom:22px">
+                        <p class="muted" style="font-size:0.86rem;line-height:1.7;font-weight:300;margin-bottom:14px">Методика дифференциальной оценки уровня тревоги. STAI разделяет тревогу на два фундаментальных измерения:</p>
+                        <div style="display:flex;flex-direction:column;gap:10px">
+                            <div style="display:flex;align-items:flex-start;gap:10px"><i class="fas fa-fire" style="color:var(--amber);margin-top:3px;width:18px;text-align:center;flex-shrink:0"></i><span style="font-size:0.82rem;color:var(--text-muted);line-height:1.5"><strong style="color:var(--text)">Ситуативная (Реактивная)</strong> — меняющееся состояние в данный момент, как реакция на конкретный стрессор</span></div>
+                            <div style="display:flex;align-items:flex-start;gap:10px"><i class="fas fa-snowflake" style="color:var(--lavender);margin-top:3px;width:18px;text-align:center;flex-shrink:0"></i><span style="font-size:0.82rem;color:var(--text-muted);line-height:1.5"><strong style="color:var(--text)">Личностная (Типологическая)</strong> — стабильная индивидуальная черта, предрасположенность воспринимать ситуации как угрожающие</span></div>
+                        </div>
+                    </div>
+                    <p class="muted" style="font-size:0.84rem;line-height:1.6;font-weight:300;margin-bottom:6px">40 утверждений, разделённых на 2 части. Оценивайте, насколько каждое утверждение подходит вам <strong style="color:var(--text)">сейчас</strong> (часть 1) и <strong style="color:var(--text)">обычно</strong> (часть 2).</p>
+                    <div class="warn-box" style="margin:16px 0 22px"><p style="font-size:0.76rem;color:var(--coral);line-height:1.5"><i class="fas fa-exclamation-triangle" style="margin-right:4px"></i>Результаты не являются клиническим диагнозом и не заменяют очную консультацию специалиста.</p></div>
+                    <button class="btn-g" onclick="beginTest()">Начать тест</button>
+                    <div class="foot" style="margin-top:18px"><span>HTML-адаптация: Н.А. Котелевцев</span><a href="https://t.me/NK_psyhology" target="_blank" rel="noopener"><i class="fab fa-telegram-plane"></i> Канал</a></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="scr" id="scr-q">
+            <div class="scr-inner" style="max-width:480px">
+                <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:-4px;">
+                    <div id="btn-back-container" style="width: 80px;"></div>
+                    <span id="q-counter" style="font-size:0.8rem; color:var(--text-muted); font-weight:600; letter-spacing:1px"></span>
+                    <div style="width: 80px; text-align:right"><span id="scale-label" style="font-size:0.75rem; color:var(--amber)">СТ-1</span></div>
+                </div>
+                <div class="prog-track"><div class="prog-fill" id="q-prog" style="width:0%"></div></div>
+                <div class="g-card" style="overflow: hidden;"><div id="q-body-wrapper"></div></div>
+            </div>
+        </section>
+
+        <section class="scr" id="scr-res">
+            <div class="scr-inner res" id="res-body" style="width: 100%;"></div>
+        </section>
+    </div>
+
+<script>
+const OPTIONS = ['Совсем нет', 'Пожалуй, так', 'Верно', 'Совершенно верно'];
+const REVERSE_IDX = [0, 4, 7, 9, 10, 13, 14, 16, 19, 20, 27, 28, 30, 31, 35, 37];
+const QUESTIONS = [
+    { t: 'Я чувствую себя спокойно' }, { t: 'Я чувствую себя напряжённым' }, { t: 'Я испытываю напряжение' },
+    { t: 'Я расстроен' }, { t: 'Я чувствую себя свободно' }, { t: 'Я потревожен' },
+    { t: 'Я беспокоюсь о возможных неудачах' }, { t: 'Я чувствую себя довольным' }, { t: 'Я озабочен' },
+    { t: 'Я чувствую себя радостным' }, { t: 'Я в хорошем расположении духа' }, { t: 'Мною овладевают тревожные мысли' },
+    { t: 'Я чувствую себя безразличным' }, { t: 'Я расслаблен' }, { t: 'Я чувствую себя уверенным' },
+    { t: 'Я встревожен' }, { t: 'Я сосредоточен' }, { t: 'Я чувствую себя нервным' },
+    { t: 'Я взвинчен' }, { t: 'Я испытываю душевный подъём' },
+    { t: 'У меня бывает приподнятое настроение' }, { t: 'Я бываю быстрым, порывистым' },
+    { t: 'Я легко огорчаюсь' }, { t: 'Я хотел бы быть таким же довольным, как другие' },
+    { t: 'Я сильно переживаю из-за пустяков' }, { t: 'Я часто устаю' }, { t: 'Я иногда чувствую себя бесполезным' },
+    { t: 'Я иногда чувствую себя счастливым' }, { t: 'Я уверен в себе' }, { t: 'Я думаю, что я обречён на страдания' },
+    { t: 'Я не тревожусь' }, { t: 'Я испытываю чувство внутреннего удовлетворения' }, { t: 'Я не могу сосредоточиться на работе' },
+    { t: 'Я чувствую себя небезопасно' }, { t: 'Я испытываю тревогу' }, { t: 'Я часто мечтаю о хорошем' },
+    { t: 'У меня бывает чувство внутреннего напряжения' }, { t: 'Я чувствую себя спокойно' },
+    { t: 'Я обеспокоен своим будущим' }, { t: 'Я стесняюсь' }
+];
+
+let curQ = 0; let ans = new Array(40).fill(-1); let lockNext = false;
+let stateScore = 0; let traitScore = 0; window.chartsRendered = false;
+let currentTab = 1;
+
+const cvs = document.getElementById('bg-canvas'); const ctx = cvs.getContext('2d'); let dots = [];
+function initDots() {
+    cvs.width = innerWidth; cvs.height = innerHeight; dots = [];
+    const n = Math.min(48, Math.floor(innerWidth * innerHeight / 19000));
+    for (let i = 0; i < n; i++) dots.push({ x: Math.random() * cvs.width, y: Math.random() * cvs.height, r: Math.random() * 1.4 + 0.4, vy: -(Math.random() * 0.18 + 0.05), vx: (Math.random() - 0.5) * 0.1, a: Math.random() * 0.38 + 0.1, ph: Math.random() * Math.PI * 2 });
+}
+function drawDots() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    for (const d of dots) {
+        d.x += d.vx; d.y += d.vy; d.ph += 0.012; const alpha = d.a * (0.6 + 0.4 * Math.sin(d.ph));
+        if (d.y < -10) { d.y = cvs.height + 10; d.x = Math.random() * cvs.width; }
+        if (d.x < -10) d.x = cvs.width + 10; if (d.x > cvs.width + 10) d.x = -10;
+        ctx.beginPath(); ctx.arc(d.x, d.y, Math.max(0.1, d.r), 0, Math.PI * 2); ctx.fillStyle = 'rgba(167,139,184,' + alpha + ')'; ctx.fill();
+    }
+    requestAnimationFrame(drawDots);
+}
+addEventListener('resize', () => { cvs.width = innerWidth; cvs.height = innerHeight; });
+initDots(); drawDots();
+
+function showScr(id) { document.querySelectorAll('.scr').forEach(s => s.classList.remove('on')); const el = document.getElementById(id); if (el) { el.classList.add('on'); el.scrollTop = 0; } }
+function beginTest() { curQ = 0; ans = new Array(40).fill(-1); lockNext = false; showScr('scr-q'); renderQuestion('next'); }
+
+function renderQuestion(direction, bypassInterstitial = false) {
+    if (curQ === 20 && !bypassInterstitial) { showInterstitial(); return; }
+    lockNext = true; 
+    const q = QUESTIONS[curQ]; 
+    const wrapper = document.getElementById('q-body-wrapper');
+    const partNum = curQ < 20 ? 1 : 2;
+    document.getElementById('q-counter').textContent = (curQ < 20 ? curQ + 1 : curQ - 19) + ' / 20';
+    document.getElementById('q-prog').style.width = (((curQ) / 40) * 100) + '%';
+    document.getElementById('scale-label').textContent = partNum === 1 ? 'СТ-1' : 'СТ-2';
+    document.getElementById('scale-label').style.color = partNum === 1 ? 'var(--amber)' : 'var(--lavender)';
+    document.getElementById('btn-back-container').innerHTML = curQ > 0 ? '<button onclick="goBack()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-family:var(--body); font-size:0.85rem; display:flex; align-items:center; padding: 4px; margin-left: -4px;"><i class="fas fa-arrow-left" style="margin-right:6px"></i>Назад</button>' : '';
+
+    if (wrapper.innerHTML !== '') { wrapper.style.opacity = '0'; wrapper.style.transform = direction === 'next' ? 'translateX(-30px)' : 'translateX(30px)'; }
+    setTimeout(() => {
+        const prefix = partNum === 1 ? 'Я чувствую себя прямо сейчас...' : 'Я обычно чувствую себя...';
+        let html = `<p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:12px; font-weight:300; text-transform:uppercase; letter-spacing:1px">${prefix}</p>`;
+        html += '<p style="font-size:1.08rem;line-height:1.5;margin-bottom:20px;font-weight:400;color:var(--text)">' + q.t + '</p>';
+        html += '<div style="display:flex;flex-direction:column;gap:10px" id="opts-list">';
+        OPTIONS.forEach((opt, i) => html += `<button class="b-opt ${ans[curQ] === i ? 'chosen' : ''}" onclick="chooseOption(${i})">${opt}</button>`);
+        html += '</div>';
+        wrapper.innerHTML = html; 
+        wrapper.style.transition = 'none'; 
+        wrapper.style.transform = direction === 'next' ? 'translateX(30px)' : 'translateX(-30px)'; 
+        void wrapper.offsetWidth;
+        wrapper.style.transition = 'transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease'; 
+        wrapper.style.opacity = '1'; wrapper.style.transform = 'translateX(0)';
+        setTimeout(() => { lockNext = false; }, 350);
+        document.getElementById('q-prog').style.width = (((curQ + 1) / 40) * 100) + '%';
+    }, wrapper.innerHTML === '' ? 0 : 250);
+}
+
+function showInterstitial() {
+    const wrapper = document.getElementById('q-body-wrapper');
+    if (wrapper.innerHTML !== '') { wrapper.style.opacity = '0'; wrapper.style.transform = 'translateX(-30px)'; }
+    setTimeout(() => {
+        wrapper.innerHTML = `<div style="text-align:center; padding: 20px 0;"><div style="font-size: 40px; color:var(--lavender); margin-bottom: 16px;"><i class="fas fa-check-circle"></i></div><h3 style="margin-bottom: 12px; font-size: 1.3rem;">Первая часть завершена</h3><p class="muted" style="font-size: 0.9rem; line-height: 1.6; margin-bottom: 24px;">Теперь оцените, насколько следующие утверждения описывают то, как вы <strong style="color:var(--text)">обычно</strong> чувствуете себя в жизни.</p><button class="btn-g" onclick="startTrait()" style="margin: 0 auto;">Продолжить</button></div>`;
+        wrapper.style.transition = 'none'; wrapper.style.transform = 'translateX(30px)'; void wrapper.offsetWidth;
+        wrapper.style.transition = 'transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.35s ease'; wrapper.style.opacity = '1'; wrapper.style.transform = 'translateX(0)';
+    }, 250);
+}
+
+function startTrait() { curQ = 20; renderQuestion('next', true); }
+function chooseOption(idx) {
+    if (lockNext) return; lockNext = true; ans[curQ] = idx;
+    document.querySelectorAll('#opts-list .b-opt').forEach((btn, i) => { btn.classList.remove('chosen'); if (i === idx) btn.classList.add('chosen'); });
+    setTimeout(() => { goNext(); }, 350);
+}
+function goBack() { if (!lockNext && curQ > 0) { curQ--; renderQuestion('prev'); } }
+function goNext() { if (ans[curQ] !== -1) { if (curQ < 39) { curQ++; renderQuestion('next'); } else { calculateResults(); } } }
+
+function calculateResults() {
+    stateScore = 0; traitScore = 0;
+    for (let i = 0; i < 40; i++) {
+        let s = ans[i] >= 0 ? ans[i] + 1 : 1; 
+        if (REVERSE_IDX.includes(i)) s = 5 - s; 
+        if (i < 20) stateScore += s; else traitScore += s;
+    }
+    window.chartsRendered = false; currentTab = 1; renderResults();
+}
+
+function getLevel(sc) {
+    if (sc <= 30) return { label: 'Низкая тревога', hex: '#2dd4bf' };
+    if (sc <= 44) return { label: 'Умеренная тревога', hex: '#fbbf24' };
+    return { label: 'Высокая тревога', hex: '#f87171' };
+}
+
+function makeProfile() {
+    const s = (i) => ans[i]; 
+    const txt = (i) => OPTIONS[s(i)]; 
+    const qtxt = (i) => QUESTIONS[i].t;
+    let html = '';
+
+    // 1. Диссонанс
+    html += `<div class="profile-section"><h4><i class="fas fa-arrows-left-right" style="background:rgba(212,168,83,0.15); color:var(--gold)"></i> Соотношение состояний</h4><p>`;
+    const delta = stateScore - traitScore;
+    if (Math.abs(delta) <= 7) html += 'Ваш уровень текущей тревоги <strong style="color:var(--text)">соответствует</strong> базовому фону. Состояние конгруэнтно, вы не тратите избыточные ресурсы на маскировку эмоций.';
+    else if (delta > 7) html += 'Ситуативная тревога <strong style="color:var(--text)">значительно превышает</strong> личностный фон. Это <strong style="color:var(--text)">острая реакция на стресс</strong>. Ваша нервная система перегружена событиями, но это не ваша постоянная характеристика. Ситуация обратима.';
+    else html += 'Личностный фон тревоги <strong style="color:var(--text)">выше</strong>, чем текущее состояние. Вероятна хорошо отлаженная система психологических защит (вытеснение, интеллектуализация) или период ремиссии. Риск срыва при истощении ресурсов.';
+    html += `</p></div>`;
+
+    // 2. Ситуативная
+    html += `<div class="profile-section"><h4><i class="fas fa-fire" style="background:rgba(251,191,36,0.15); color:var(--amber)"></i> Ситуативная тревога (Стресс-реакция)</h4><p>`;
+    if (stateScore <= 30) html += 'Вегетативная нервная система в зоне комфорта. Симпатико-адреналовая система не активирована. Когнитивные функции доступны в полном объёме.';
+    else if (stateScore <= 44) {
+        html += 'Функциональное напряжение. ';
+        if (s(1) >= 2) html += 'Присутствует мышечный корсет тревоги: <span class="quote-marker">«' + qtxt(1) + ' — ' + txt(1) + '»</span>. ';
+        if (s(11) >= 2) html += 'Запущена руминация (мыслительная жвачка): <span class="quote-marker">«' + qtxt(11) + ' — ' + txt(11) + '»</span>. ';
+    } else {
+        html += 'Острый тревожный приступ (состояние стресса). ';
+        if (s(18) >= 2) html += 'Регистрируется аффективное возбуждение: <span class="quote-marker">«' + qtxt(18) + ' — ' + txt(18) + '»</span>. ';
+        if (s(16) <= 1) html += 'Когнитивный контроль нарушен: <span class="quote-marker">«' + qtxt(16) + ' — ' + txt(16) + '»</span>. ';
+        if (s(15) >= 2) html += 'Включена гипервигильность (постоянный поиск угрозы). ';
+    }
+    html += `</p></div>`;
+
+    // 3. Личностная
+    html += `<div class="profile-section"><h4><i class="fas fa-snowflake" style="background:rgba(167,139,250,0.15); color:var(--lavender)"></i> Личностная тревога (Базовый фон)</h4><p>`;
+    if (traitScore <= 30) html += 'Низкий нейротизм. Адаптивные копинг-стратегии сформированы. Антиципационная тревога (страх перед будущим) не доминирует.';
+    else if (traitScore <= 44) {
+        html += 'Склонность к повышенной тревожности как черте. ';
+        if (s(24) >= 2) html += 'Сенсибилизация к мелким стрессорам: <span class="quote-marker">«' + qtxt(24) + ' — ' + txt(24) + '»</span>. ';
+        if (s(29) >= 2) html += 'Когнитивное искажение катастрофизации: <span class="quote-marker">«' + qtxt(29) + ' — ' + txt(29) + '»</span>. ';
+        html += 'Часто сочетается с высокой рефлексией, но ведет к истощению.';
+    } else {
+        html += 'Высокий уровень личностной тревожности («тревожный тип личности»). ';
+        if (s(33) >= 2) html += 'Базовое чувство небезопасности мира: <span class="quote-marker">«' + qtxt(33) + ' — ' + txt(33) + '»</span>. ';
+        if (s(25) >= 2) html += 'Формируется астенический контур: <span class="quote-marker">«' + qtxt(25) + ' — ' + txt(25) + '»</span>. ';
+        html += 'Хроническая тревога выступает фундаментом для психосоматических сдвигов.';
+    }
+    html += `</p></div>`;
+
+    // 4. Соматический вектор
+    html += `<div class="profile-section"><h4><i class="fas fa-heart-pulse" style="background:rgba(248,113,113,0.15); color:var(--coral)"></i> Соматический вектор</h4><p>`;
+    const somState = (s(2) >= 2 ? 1 : 0) + (s(17) >= 2 ? 1 : 0) + (s(18) >= 2 ? 1 : 0);
+    const somTrait = (s(25) >= 2 ? 1 : 0) + (s(33) >= 2 ? 1 : 0) + (s(35) >= 2 ? 1 : 0);
+    if (somState <= 1 && somTrait <= 1) html += 'Телесные проявления минимальны. Психосоматический конверсионный потенциал не выявлен.';
+    else {
+        html += 'Обнаружены маркеры соматизации. Тревога «выходит» через тело. ';
+        if (s(17) >= 2) html += 'Нервно-мышечное напряжение: <span class="quote-marker">«' + qtxt(17) + ' — ' + txt(17) + '»</span>. ';
+        if (s(25) >= 2) html += 'Астенический синдром (хроническая усталость): <span class="quote-marker">«' + qtxt(25) + ' — ' + txt(25) + '»</span>. ';
+    }
+    html += `</p></div>`;
+
+    // 5. Защитные механизмы и копинги
+    html += `<div class="profile-section"><h4><i class="fas fa-shield-halved" style="background:rgba(148,163,184,0.15); color:var(--slate)"></i> Защитные механизмы и копинги</h4><p>`;
+    if (s(12) >= 2) html += 'Выявлен механизм <strong style="color:var(--text)">апатии/диссоциации</strong> как защита от тревоги: <span class="quote-marker">«' + qtxt(12) + ' — ' + txt(12) + '»</span>. Эмоции блокируются на входе. ';
+    if (s(21) >= 2) html += 'Присутствует <strong style="color:var(--text)">импульсивный копинг</strong> (действие вместо переживания): <span class="quote-marker">«' + qtxt(21) + ' — ' + txt(21) + '»</span>. ';
+    if (s(32) >= 2 && s(11) >= 2) html += 'Тревога перерабатывается через <strong style="color:var(--text)">руминацию</strong>, а не решается. Когнитивный контроль истощен. ';
+    if (stateScore <= 30 && traitScore >= 45) html += 'При высоком фоне и низком состоянии вероятен копинг <strong style="color:var(--text)">подавления (suppression)</strong> — вы блокируете тревогу усилием воли, что требует огромных ресурсов. ';
+    html += `</p></div>`;
+
+    // 6. Социальный вектор
+    html += `<div class="profile-section"><h4><i class="fas fa-users" style="background:rgba(45,212,191,0.15); color:var(--teal)"></i> Социальный вектор</h4><p>`;
+    if (s(39) >= 2 || (traitScore > 30 && s(23) >= 2)) {
+        html += 'Тревога деформирует межличностные взаимодействия. ';
+        if (s(39) >= 2) html += 'Выявлен страх социальной оценки: <span class="quote-marker">«' + qtxt(39) + ' — ' + txt(39) + '»</span>. ';
+        if (s(23) >= 2) html += 'Склонность к избеганию контактов или их ограничению: <span class="quote-marker">«' + qtxt(23) + ' — ' + txt(23) + '»</span>. ';
+    } else {
+        html += 'Социальная сфера не выступает значимым триггером тревоги. Коммуникация сохраняет адаптивный характер.';
+    }
+    html += `</p></div>`;
+
+    // 7. Типологическое резюме
+    html += `<div class="profile-section"><h4><i class="fas fa-fingerprint" style="background:rgba(212,168,83,0.15); color:var(--gold)"></i> Психологический портрет (Резюме)</h4><p>`;
+    if (stateScore <= 30 && traitScore <= 30) html += 'Вы обладаете <strong style="color:var(--text)">устойчивым психологическим контуром</strong>. Ваша нервная система эффективно справляется с нагрузками, а когнитивная оценка угроз адекватна. Вы можете выступать стресс-стабилизатором для окружающих, однако важно не забывать о собственных потребностях.';
+    else if (stateScore > 44 && traitScore <= 30) html += '<strong style="color:var(--text)">Острый реагирующий тип.</strong> Ваша базовая структура устойчива, но текущий стрессор пробил защитный барьер. Это состояние «бури», которая утихнет при устранении внешнего фактора или при базовой разгрузке (сон, отдых). Риск перехода в хроническую форму минимальен.';
+    else if (stateScore <= 30 && traitScore > 44) html += '<strong style="color:var(--text)">Маскированный (сверхконтролируемый) тип.</strong> Вы носите тревогу внутри, как «второе дыхание», не позволяя ей выходить наружу. Вы выглядите спокойным, но внутри постоянно сканируете пространство на предмет угроз. Этот тип опасен внезапными паническими атаками или психосоматикой при истощении контроля.';
+    else if (stateScore > 44 && traitScore > 44) html += '<strong style="color:var(--text)">Глобально дезадаптированный тип.</strong> Текущее состояние усугубляет фоновую уязвимость. Ваша нервная система работает на пределе. Требуется комплексное вмешательство: фармакологическая поддержка (для снятия острого состояния) в сочетании с психотерапией (для работы с фоном).';
+    else html += '<strong style="color:var(--text)">Смешанный (пограничный) тип.</strong> Присутствуют элементы как ситуативного напряжения, так и фоновой склонности к тревоге. Это наиболее распространенный профиль в современных мегаполисах. При правильной работе с копинг-стратегиями легко возвращается в норму.';
+    html += `</p></div>`;
+
+    return html;
+}
+
+function makeRecommendations() {
+    const s = (i) => ans[i]; 
+    let html = `<div class="g-card" style="border-color: rgba(45,212,191,0.2);"><h3 style="margin-bottom: 16px; color: var(--teal);"><i class="fas fa-lightbulb" style="margin-right: 8px;"></i>Индивидуальные рекомендации</h3>`;
+    
+    // Когнитивные рекомендации
+    if (s(11) >= 2 || s(6) >= 2 || s(32) >= 2) {
+        html += `<p style="font-size:0.88rem; color:var(--text); margin-bottom: 8px; font-weight: 500;">Для снижения когнитивной тревоги (мыслей):</p>
+        <ul class="rec-list">
+            <li>Ведите «дневник тревоги» (СТ-Дневник): фиксируйте мысль, силу тревоги (1-10) и реальный исход. Разрушите когнитивное искажение катастрофизации фактами.</li>
+            <li>Используйте технику «Континуум» (а не «Чёрно-белое мышление»): вместо «у меня всё провалится» найдите 5 реалистичных сценариев между абсолютным провалом и идеалом.</li>
+            <li>Выделите «время для тревоги» — 15 минут в день, когда вы сознательно тревожитесь. Вне этого времени поймав себя на тревоге — говорите себе: «Я подумаю об этом в свои 15 минут».</li>
+        </ul>`;
+    }
+
+    // Соматические рекомендации
+    if (s(2) >= 2 || s(17) >= 2 || s(25) >= 2 || s(35) >= 2) {
+        html += `<p style="font-size:0.88rem; color:var(--text); margin-bottom: 8px; margin-top: 16px; font-weight: 500;">Для снятия телесного напряжения:</p>
+        <ul class="rec-list">
+            <li>Практика Progressive Muscle Relaxation (ПМР) по Джекобсону — поочерёдное напряжение и расслабление мышечных групп. Начинайте с кистей и лица.</li>
+            <li>Дыхательные практики: удлинённый выдох (вдох на 4 счёта, выдох на 6-8 счётов) активирует парасимпатическую нервную систему.</li>
+            <li>Снизьте потребление кофеина и стимуляторов — они биологически имитируют тревогу (повышают пульс, вызывают тремор).</li>
+        </ul>`;
+    }
+
+    // Поведенческие и социальные
+    if (s(39) >= 2 || s(23) >= 2 || s(21) >= 2) {
+        html += `<p style="font-size:0.88rem; color:var(--text); margin-bottom: 8px; margin-top: 16px; font-weight: 500;">Для работы с социальной тревогой:</p>
+        <ul class="rec-list">
+            <li>Сместите фокус внимания с себя на собеседника (вместо «как я выгляжу?» спрашивайте «что сейчас чувствует/говорит он?»).</li>
+            <li>Используйте принцип «градуированного погружения» — составьте лестницу из пугающих социальных ситуаций и двигайтесь по ней снизу вверх.</li>
+        </ul>`;
+    }
+
+    // Глобальные рекомендации при высоком trait
+    if (traitScore > 44) {
+        html += `<p style="font-size:0.88rem; color:var(--coral); margin-bottom: 8px; margin-top: 16px; font-weight: 600;">При высоком личностном фоне:</p>
+        <ul class="rec-list">
+            <li>Когнитивно-поведенческая терапия (КПТ) — метод первого выбора для работы с личностной тревогой. Фокус на выявлении и изменении глубинных убеждений.</li>
+            <li>ACT (Терапия принятия и ответственности) — учит не бороться с тревогой, а расширять зону tolerated discomfort (переносимого дискомфорта).</li>
+            <li>Рассмотрите консультацию с психиатром для исключения генерализованного тревожного расстройства (ГТР) и обсуждения возможности фармакотерапии.</li>
+        </ul>`;
+    }
+    
+    // Базовые для всех
+    html += `<p style="font-size:0.88rem; color:var(--text); margin-bottom: 8px; margin-top: 16px; font-weight: 500;">Фундаментальные основы:</p>
+    <ul class="rec-list">
+        <li><strong style="color:var(--text)">Сон:</strong> тревога разрушается в фазе глубокого сна. Строго соблюдайте режим (отбой и подъём в одно время), исключите экраны за 1 час до сна.</li>
+        <li><strong style="color:var(--text)">Физическая активность:</strong> аэробные нагрузки (бег, плавание) метаболизируют кортизол и адреналин, накопленные при тревоге. Минимум 150 минут в неделю.</li>
+        <li><strong style="color:var(--text)">Информационная гигиена:</strong> ограничьте думскроллинг и потребление новостей. Тревога питается информационной неопределённостью.</li>
+    </ul>`;
+
+    html += `</div>`;
+    return html;
+}
+
+function renderResults() {
+    const stLvl = getLevel(stateScore);
+    const trLvl = getLevel(traitScore);
+    
+    const html = `
+        <div style="text-align:center; margin-bottom: 10px;" class="rise">
+            <div style="display:flex; justify-content:center; gap: 30px; margin-bottom: 20px; flex-wrap: wrap;">
+                <div style="display:flex; flex-direction:column; align-items:center; gap: 8px;">
+                    <span style="font-size:0.78rem; color:var(--amber); text-transform:uppercase; letter-spacing:1px; font-weight:600;">Ситуативная</span>
+                    <span class="big-num" style="color:${stLvl.hex}; -webkit-text-fill-color:${stLvl.hex}">${stateScore}</span>
+                    <span style="font-size:0.88rem; color:${stLvl.hex}; font-weight:500; margin-top:-4px">${stLvl.label}</span>
+                </div>
+                <div style="width:1px; background:rgba(255,255,255,0.08); align-self:stretch;"></div>
+                <div style="display:flex; flex-direction:column; align-items:center; gap: 8px;">
+                    <span style="font-size:0.78rem; color:var(--lavender); text-transform:uppercase; letter-spacing:1px; font-weight:600;">Личностная</span>
+                    <span class="big-num" style="color:${trLvl.hex}; -webkit-text-fill-color:${trLvl.hex}">${traitScore}</span>
+                    <span style="font-size:0.88rem; color:${trLvl.hex}; font-weight:500; margin-top:-4px">${trLvl.label}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs-wrap">
+            <button class="tab-btn active" onclick="switchTab(1)">Показатели</button>
+            <button class="tab-btn" onclick="switchTab(2)">Визуализация</button>
+            <button class="tab-btn" onclick="switchTab(3)">Профиль</button>
+        </div>
+
+        <div class="swipe-container" style="margin-top: 16px;">
+            <div class="swipe-track" id="swipe-track">
+                <div class="swipe-slide">
+                    <div class="g-card">
+                        <h3 style="margin-bottom: 16px;">Диагностические уровни</h3>
+                        <div style="display:flex; flex-direction:column; gap: 16px;">
+                            <div><div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-size:0.84rem; color:var(--amber); font-weight:500;">Ситуативная тревога</span><span style="font-size:0.84rem; color:var(--text-muted);">${stateScore} из 80</span></div><div style="height:8px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;"><div class="bar-fill" style="width:${(stateScore/80)*100}%; background:${stLvl.hex};"></div></div></div>
+                            <div><div style="display:flex; justify-content:space-between; margin-bottom:6px;"><span style="font-size:0.84rem; color:var(--lavender); font-weight:500;">Личностная тревога</span><span style="font-size:0.84rem; color:var(--text-muted);">${traitScore} из 80</span></div><div style="height:8px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;"><div class="bar-fill" style="width:${(traitScore/80)*100}%; background:${trLvl.hex};"></div></div></div>
+                        </div>
+                    </div>
+                    <div class="g-card">
+                        <h3 style="margin-bottom:12px; font-size:0.95rem;">Интерпретация шкал</h3>
+                        <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.65; margin-bottom:12px;"><strong style="color:var(--teal)">до 30 баллов</strong> — Низкая тревога (адаптивный ресурс)</p>
+                        <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.65; margin-bottom:12px;"><strong style="color:var(--amber)">31–44 балла</strong> — Умеренная тревога (пограничный уровень)</p>
+                        <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.65;"><strong style="color:var(--coral)">45+ баллов</strong> — Высокая тревога (риск дезадаптации)</p>
+                    </div>
+                </div>
+
+                <div class="swipe-slide">
+                    <div class="g-card"><h3 style="margin-bottom: 16px; font-size: 0.95rem;">Структура проявлений</h3><canvas id="chart-radar"></canvas><p style="font-size:0.7rem; color:var(--text-muted); margin-top:10px; text-align:center;">* Интерпретативная группировка для визуального анализа</p></div>
+                    <div class="g-card"><h3 style="margin-bottom: 16px; font-size: 0.95rem;">Сравнение баллов</h3><canvas id="chart-bar"></canvas></div>
+                </div>
+
+                <div class="swipe-slide" id="profile-tab">
+                    <div class="g-card">${makeProfile()}</div>
+                    ${makeRecommendations()}
+                </div>
+            </div>
+        </div>
+
+        <div class="warn-box" style="margin-top: 10px;"><p style="font-size:0.76rem;color:var(--coral);line-height:1.5; text-align:center;"><i class="fas fa-user-doctor" style="margin-right:4px"></i>При высоких показателях (45+) рекомендуется обратиться к специалисту для подбора методов коррекции.</p></div>
+
+        <div style="display:flex; gap: 12px; margin-top: 16px; width: 100%;">
+            <button class="btn-back" onclick="location.reload()"><i class="fas fa-rotate-left" style="margin-right:6px"></i>Заново</button>
+            <div class="save-box">
+                <button class="btn-g" style="max-width:none;" onclick="toggleSaveDrop(event)"><i class="fas fa-download" style="margin-right:8px"></i>Сохранить</button>
+                <div class="save-drop" id="save-drop">
+                    <button onclick="saveImage()"><i class="fas fa-image"></i> Сохранить как изображение</button>
+                    <button onclick="window.print()"><i class="fas fa-print"></i> Печать / Сохранить в PDF</button>
+                </div>
+            </div>
+        </div>
+        <div class="foot" style="margin-top:10px"><span>HTML-адаптация: Н.А. Котелевцев</span><a href="https://t.me/NK_psyhology" target="_blank" rel="noopener"><i class="fab fa-telegram-plane"></i> Канал</a></div>
+    `;
+
+    document.getElementById('res-body').innerHTML = html;
+    showScr('scr-res');
+    setTimeout(() => { initCharts(); }, 150);
+}
+
+function switchTab(idx) {
+    currentTab = idx;
+    document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === idx - 1));
+    document.getElementById('swipe-track').style.transform = `translateX(-${(idx - 1) * 33.3333}%)`;
+    if (idx === 2 && !window.chartsRendered) setTimeout(initCharts, 100);
+}
+
+function initCharts() {
+    if (window.chartsRendered) return;
+    window.chartsRendered = true;
+    const getSum = (arr) => { let sum = 0; arr.forEach(i => { let s = ans[i] >= 0 ? ans[i] + 1 : 1; if (REVERSE_IDX.includes(i)) s = 5 - s; sum += s; }); return sum; };
+    const radData = [
+        { label: 'Эмоциональная', st: getSum([0, 3, 8, 10, 11, 19]), tr: getSum([22, 26, 29, 39]), max: 24 },
+        { label: 'Когнитивная', st: getSum([5, 6, 9, 12, 15]), tr: getSum([23, 31, 36]), max: 20 },
+        { label: 'Соматическая', st: getSum([1, 2, 13, 17, 18]), tr: getSum([25, 34, 37]), max: 20 },
+        { label: 'Самооценка', st: getSum([4, 7, 14, 16]), tr: getSum([20, 21, 28, 30, 35]), max: 20 },
+        { label: 'Социальная', st: getSum([20]), tr: getSum([24, 27, 32, 38]), max: 16 }
+    ];
+
+    const rCtx = document.getElementById('chart-radar');
+    if(rCtx) {
+        new Chart(rCtx, {
+            type: 'radar',
+            data: { labels: radData.map(d => d.label), datasets: [
+                { label: 'Ситуативная', data: radData.map(d => (d.st/d.max)*100), borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.15)', borderWidth: 2, pointBackgroundColor: '#fbbf24' },
+                { label: 'Личностная', data: radData.map(d => (d.tr/d.max)*100), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.15)', borderWidth: 2, pointBackgroundColor: '#a78bfa' }
+            ]},
+            options: { responsive: true, maintainAspectRatio: true, scales: { r: { beginAtZero: true, max: 100, ticks: { display: false, stepSize: 25 }, grid: { color: 'rgba(255,255,255,0.06)' }, pointLabels: { color: '#e8ecf1', font: { family: 'Outfit', size: 11 } }, angleLines: { color: 'rgba(255,255,255,0.06)' } } }, plugins: { legend: { labels: { color: '#e8ecf1', font: { family: 'Outfit', size: 12 }, boxWidth: 12, padding: 15 } } } }
+        });
+    }
+
+    const bCtx = document.getElementById('chart-bar');
+    if(bCtx) {
+        new Chart(bCtx, {
+            type: 'bar',
+            data: { labels: ['Ситуативная', 'Личностная'], datasets: [{ label: 'Ваши баллы', data: [stateScore, traitScore], backgroundColor: [getLevel(stateScore).hex + 'AA', getLevel(traitScore).hex + 'AA'], borderColor: [getLevel(stateScore).hex, getLevel(traitScore).hex], borderWidth: 1, borderRadius: 6 }] },
+            options: { responsive: true, scales: { y: { beginAtZero: true, max: 80, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#7b8da6', font: { family: 'Outfit', size: 11 } } }, x: { grid: { display: false }, ticks: { color: '#e8ecf1', font: { family: 'Outfit', size: 12, weight: 500 } } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return (context.dataIndex === 0 ? getLevel(stateScore) : getLevel(traitScore)).label; } } } } }
+        });
+    }
+}
+
+function toggleSaveDrop(e) { e.stopPropagation(); document.getElementById('save-drop').classList.toggle('show'); }
+document.addEventListener('click', () => document.getElementById('save-drop')?.classList.remove('show'));
+function saveImage() { document.getElementById('save-drop').classList.remove('show'); alert('Для сохранения изображения используйте функцию "Печать / Сохранить в PDF" и выберите "Сохранить как PDF" в системном диалоге печати.'); }
+</script>
+</body>
+</html>
